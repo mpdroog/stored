@@ -1,0 +1,16 @@
+{
+	"Begin": "2006-01-02",
+	"Basedir": "./example/",
+	"version": 1,
+	"files": {
+		"nZFk2WchAvwxepEVQWV8T@spot.net": {
+			"File": "2015/05/md5.txt",
+			"Age": 12
+		}
+	},
+	"refs": {
+		"free.pt": {
+			"7533321": "nZFk2WchAvwxepEVQWV8T@spot.net"
+		}
+	}
+}
