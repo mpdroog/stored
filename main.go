@@ -24,7 +24,7 @@ func main() {
 	configPath := ""
 	listen := ""
 	flag.BoolVar(&config.Verbose, "v", false, "Verbose-mode (log more)")
-	flag.StringVar(&configPath, "c", "./db.json", "Path to config.json")
+	flag.StringVar(&configPath, "c", "./datastore", "Path to datastore")
 	flag.StringVar(&listen, "l", "0.0.0.0:9090", "Listen on ip:port")
 	flag.Parse()
 
@@ -35,9 +35,11 @@ func main() {
 	mux.Title = "StoreD API"
 	mux.Desc = "Simple datastore for NNTP Articles."
 	mux.Add("/", doc, "This documentation")
-	mux.Add("/article", article, "GET article by id=? | POST article SET id=? AND msgid=?")
-	mux.Add("/msgid", msgid, "GET message by msgid=? | POST message SET msgid=? AND body=?")
+	//mux.Add("/meta", article, "PUT Meta set key=?,value=? WHERE msgid=?")
+	mux.Add("/msgid", Msgid, "GET message by msgid=? | POST message SET msgid=? AND body=?")
 	http.Handle("/", middleware.Use(mux.Mux))
+
+	// TODO: Catch CTRL+C
 
 	if config.Verbose {
 		fmt.Println("stored listening on " + listen)
