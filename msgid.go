@@ -18,15 +18,15 @@ import (
 
 type PostInput struct {
 	Msgid string
-	Body []byte
+	Body string
 	Meta map[string]string
 }
 
 // Add msg to DB
 func Post(w http.ResponseWriter, r *http.Request) error {
-	dec := json.NewDecoder(r.Body)
+	defer r.Body.Close()
 	var in PostInput
-	if e := dec.Decode(&in); e != nil {
+	if e := json.NewDecoder(r.Body).Decode(&in); e != nil {
 		return e
 	}
 	if in.Msgid == "" || len(in.Body) == 0 {
@@ -53,7 +53,7 @@ func Post(w http.ResponseWriter, r *http.Request) error {
 		}()
 
 		w := bufio.NewWriter(f)
-		if _, e := io.Copy(w, bytes.NewBuffer(in.Body)); e != nil {
+		if _, e := io.Copy(w, bytes.NewBufferString(in.Body)); e != nil {
 			return e
 		}
 
@@ -102,7 +102,7 @@ func Get(w http.ResponseWriter, r *http.Request) error {
 		return errors.New("Article not found msgid=" + msgid)
 	}	
 
-	path := basedir + item.File
+	path := basedir + item.File + ".txt"
 	if config.Verbose {
 		fmt.Println("Read " + path)
 	}
