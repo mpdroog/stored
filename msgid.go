@@ -11,7 +11,6 @@ import (
 	"stored/headreader"
 	"stored/bodyreader"
 	"os"
-	"errors"
 	"time"
 	"bytes"
 )
@@ -30,14 +29,20 @@ func Post(w http.ResponseWriter, r *http.Request) error {
 		return e
 	}
 	if in.Msgid == "" || len(in.Body) == 0 {
-		panic("Missing msgid or body")
+		httpd.FlushJson(w, httpd.DefaultResponse{
+			Status: false, Text: "Missing msgid or body",
+		})
+		return nil
 	}
 
 	// TODO: Crash on day change
 	today := time.Now().Format("2006-01-02")
 	store := config.Stores[today]
 	if _, already := store.Files[in.Msgid]; already {
-		panic("Already have article " + in.Msgid)
+		httpd.FlushJson(w, httpd.DefaultResponse{
+			Status: false, Text: "Already have article " + in.Msgid,
+		})
+		return nil
 	}
 
 	// Write to FS
@@ -64,21 +69,40 @@ func Post(w http.ResponseWriter, r *http.Request) error {
 		File: in.Msgid,
 		Meta: in.Meta,
 	}
-	return config.Save(store)
+	if e := config.Save(store); e != nil {
+		return e
+	}
+
+	if config.Verbose {
+		fmt.Println("Saved " + in.Msgid)
+	}
+	httpd.FlushJson(w, httpd.DefaultResponse{
+		Status: true, Text: "Saved",
+	})
+	return nil
 }
 
 // Read msg by msgid
 func Get(w http.ResponseWriter, r *http.Request) error {
 	msgid := r.URL.Query().Get("msgid")
 	if msgid == "" {
-		return errors.New("GET msgid not given")
+		httpd.FlushJson(w, httpd.DefaultResponse{
+			Status: false, Text: "msgid not given",
+		})
+		return nil
 	}
 	readType := r.URL.Query().Get("type")
 	if readType == "" {
-		return errors.New("GET type not given")
+		httpd.FlushJson(w, httpd.DefaultResponse{
+			Status: false, Text: "type not given",
+		})
+		return nil
 	}
 	if readType != "HEAD" && readType != "ARTICLE" && readType != "BODY" {
-		return errors.New("GET type only support [HEAD, ARTICLE, BODY]")
+		httpd.FlushJson(w, httpd.DefaultResponse{
+			Status: false, Text: "Type invalid value, valid=[HEAD, ARTICLE, BODY]",
+		})
+		return nil
 	}
 
 	// Check if data in one of the datasets
@@ -97,9 +121,12 @@ func Get(w http.ResponseWriter, r *http.Request) error {
 		}
 	}
 	if !ok {
-		// TODO: Log so an engineer can fix
-		// TODO: Don't report as 'error'
-		return errors.New("Article not found msgid=" + msgid)
+		msg := "Article not found msgid=" + msgid
+		fmt.Println("WARN: " + msg)
+		httpd.FlushJson(w, httpd.DefaultResponse{
+			Status: false, Text: msg,
+		})
+		return nil
 	}	
 
 	path := basedir + item.File + ".txt"
@@ -112,7 +139,7 @@ func Get(w http.ResponseWriter, r *http.Request) error {
 	}
 	defer func() {
 		if e := f.Close(); e != nil {
-			fmt.Println("WARN: Failed closing file=" + path)
+			panic(e)
 		}
 	}()
 
