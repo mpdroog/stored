@@ -35,9 +35,14 @@ func Post(w http.ResponseWriter, r *http.Request) error {
 		return nil
 	}
 
-	// TODO: Crash on day change
-	today := time.Now().Format("2006-01-02")
-	store := config.Stores[today]
+	now := time.Now()
+	today := now.Format("2006-01-02")
+	store, hasStore := config.Stores[today]
+	if !hasStore {
+		if e := config.Create(now); e != nil {
+			return e
+		}
+	}
 	if _, already := store.Files[in.Msgid]; already {
 		httpd.FlushJson(w, httpd.DefaultResponse{
 			Status: false, Text: "Already have article " + in.Msgid,
@@ -66,11 +71,16 @@ func Post(w http.ResponseWriter, r *http.Request) error {
 	}
 
 	config.Stores[today].Files[in.Msgid] = config.File{
-		File: in.Msgid,
 		Meta: in.Meta,
 	}
 	if e := config.Save(store); e != nil {
 		return e
+	}
+	stat := config.Stats[today].Files[in.Msgid]
+	stat.Age = store.Since()
+	config.Stats[today].Files[in.Msgid] = stat
+	if e := config.SaveStats(store.Basedir, config.Stats[today]); e != nil {
+		fmt.Println("WARN: Failed saving stats: " + e.Error())
 	}
 
 	if config.Verbose {
@@ -108,14 +118,14 @@ func Get(w http.ResponseWriter, r *http.Request) error {
 	// Check if data in one of the datasets
 	var (
 		basedir string
-		item config.File
+		//item config.File
 		ok bool
 		date string
+		store config.DB
 	)
-	for d, store := range config.Stores {
-		item, ok = store.Files[msgid]
+	for date, store = range config.Stores {
+		_, ok = store.Files[msgid]
 		if ok {
-			date = d
 			basedir = store.Basedir
 			break
 		}
@@ -129,7 +139,7 @@ func Get(w http.ResponseWriter, r *http.Request) error {
 		return nil
 	}	
 
-	path := basedir + item.File + ".txt"
+	path := basedir + msgid + ".txt"
 	if config.Verbose {
 		fmt.Println("Read " + path)
 	}
@@ -163,8 +173,12 @@ func Get(w http.ResponseWriter, r *http.Request) error {
 		s = config.FileStat{}
 	}
 	s.Count++
-	s.Last = 12 // TODO
+	s.Last = store.Since()
 	config.Stats[date].Files[msgid] = s
+	if e := config.SaveStats(store.Basedir, config.Stats[date]); e != nil {
+		fmt.Println("WARN: Failed saving stats: " + e.Error())
+	}
+
 	return nil
 }
 

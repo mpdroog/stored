@@ -12,7 +12,6 @@ import (
 )
 
 type File struct {
-	File string
 	Meta map[string]string
 }
 type DB struct {
@@ -28,8 +27,8 @@ func (d *DB) Since() int64 {
 }
 
 type FileStat struct {
-	Age int                   // minutes since Begin
-	Last int                  // Last read (minutes since Begin)
+	Age int64                   // minutes since Begin
+	Last int64                // Last read (minutes since Begin)
 	Count int                 // Amount of times read
 }
 type Stat struct {
@@ -101,16 +100,16 @@ func Init(path string) error {
 	// Ensure we got a datastore for today
 	today := time.Now()
 	if _, ok := Stores[today.Format("2006-01-02")]; !ok {
-		if e := create(basedir, time.Now()); e != nil {
+		if e := Create(time.Now()); e != nil {
 			return e
 		}
 	}
 	return nil
 }
 
-func create(base string, date time.Time) error {
+func Create(date time.Time) error {
 	today := date.Format("2006-01-02")
-	path := base + "/" + today + "/"
+	path := basedir + "/" + today + "/"
 	if Verbose {
 		fmt.Println("Create datastore=" + path)
 	}
@@ -194,6 +193,25 @@ func read(f string, v interface{}) error {
 
 func Save(d DB) error {
 	f, e := os.Create(d.Basedir + "db.json")
+	if e != nil {
+		return e
+	}
+	defer func() {
+		if e := f.Close(); e != nil {
+			panic(e)
+		}
+	}()
+
+	w := bufio.NewWriter(f)
+	if e := json.NewEncoder(w).Encode(&d); e != nil {
+		return e
+	}
+	w.Flush()
+	return nil
+}
+
+func SaveStats(basedir string, d Stat) error {
+	f, e := os.Create(basedir + "stats.json")
 	if e != nil {
 		return e
 	}
