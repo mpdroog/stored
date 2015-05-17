@@ -113,7 +113,7 @@ class Api {
      * @return mixed Response
      * @throws Exception On any problem
      */
-    private static function call($method, $path, $body, $contentType = "application/json") {
+    public static function call($method, $path, $body, $contentType = "application/json") {
         if (self::$_contect === FALSE) {
             self::init();
         }
