@@ -6,6 +6,10 @@ import (
 	"net/http"
 	"github.com/xsnews/webutils/middleware"
 	"github.com/xsnews/webutils/muxdoc"
+	"github.com/xsnews/webutils/httpd"
+
+	"encoding/json"
+	"stored/db"
 )
 
 var (
@@ -17,6 +21,58 @@ func doc(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(404)
 	w.Header().Set("Content-Type", "text/html")
 	fmt.Fprintf(w, mux.String())
+}
+
+// Add msg to DB
+func Post(w http.ResponseWriter, r *http.Request) error {
+	defer r.Body.Close()
+	var in db.SaveInput
+	if e := json.NewDecoder(r.Body).Decode(&in); e != nil {
+		return e
+	}
+	usrErr, sysErr := db.Save(in)
+	if sysErr != nil {
+		return sysErr
+	}
+
+	httpd.FlushJson(w, httpd.DefaultResponse{
+		Status: true, Text: usrErr.Error(),
+	})
+	return nil
+}
+
+// Read msg by msgid
+func Get(w http.ResponseWriter, r *http.Request) error {
+	var in db.ReadInput
+	in.Msgid = r.URL.Query().Get("msgid")
+	in.Type = r.URL.Query().Get("type")
+
+	usrErr, sysErr := db.Read(in, w)
+	if sysErr != nil {
+		return sysErr
+	}
+	if usrErr != nil {
+		httpd.FlushJson(w, httpd.DefaultResponse{
+			Status: true, Text: usrErr.Error(),
+		})
+	}
+	return nil
+}
+
+func Msgid(w http.ResponseWriter, r *http.Request) {
+	var e error
+	if r.Method == "GET" {
+		e = Get(w, r)
+	} else if r.Method == "POST" {
+		e = Post(w, r)
+	} else {
+		httpd.FlushJson(w, httpd.DefaultResponse{Status: false, Text: "Unsupported HTTP Method=" + r.Method})
+	}
+
+	if e != nil {
+		fmt.Println("ERR: " + e.Error())
+		httpd.FlushJson(w, httpd.DefaultResponse{Status: false, Text: "Processing error"})
+	}
 }
 
 func httpListen(listen string) error {

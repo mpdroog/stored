@@ -1,60 +1,52 @@
-package main
+package db
 
 import (
-	"encoding/json"
-	"io"
-	"bufio"
 	"fmt"
-	"net/http"
-	"github.com/xsnews/webutils/httpd"
+	"time"
 	"stored/config"
+	"os"
+	"bufio"
+	"io"
+	"bytes"
+
 	"stored/headreader"
 	"stored/bodyreader"
-	"os"
-	"time"
-	"bytes"
 )
 
-type PostInput struct {
+type SaveInput struct {
 	Msgid string
 	Body string
 	Meta map[string]string
 }
 
-// Add msg to DB
-func Post(w http.ResponseWriter, r *http.Request) error {
-	defer r.Body.Close()
-	var in PostInput
-	if e := json.NewDecoder(r.Body).Decode(&in); e != nil {
-		return e
-	}
-	if in.Msgid == "" || len(in.Body) == 0 {
-		httpd.FlushJson(w, httpd.DefaultResponse{
-			Status: false, Text: "Missing msgid or body",
-		})
-		return nil
-	}
+type ReadInput struct {
+	Msgid string
+	Type string
+}
 
+func Save(in SaveInput) (error, error) {
 	now := time.Now()
 	today := now.Format("2006-01-02")
+
+	if in.Msgid == "" || len(in.Body) == 0 {
+		return fmt.Errorf("Missing msgid or body"), nil
+	}
+
 	store, hasStore := config.Stores[today]
 	if !hasStore {
 		if e := config.Create(now); e != nil {
-			return e
+			return nil, e
 		}
 	}
 	if _, already := store.Files[in.Msgid]; already {
-		httpd.FlushJson(w, httpd.DefaultResponse{
-			Status: false, Text: "Already have article " + in.Msgid,
-		})
-		return nil
+		return fmt.Errorf("Already have article %s", in.Msgid), nil
 	}
 
 	// Write to FS
 	{
 		f, e := os.Create(store.Basedir + in.Msgid + ".txt")
 		if e != nil {
-			return e
+			return nil, e
 		}
 		defer func() {
 			if e := f.Close(); e != nil {
@@ -64,17 +56,19 @@ func Post(w http.ResponseWriter, r *http.Request) error {
 
 		w := bufio.NewWriter(f)
 		if _, e := io.Copy(w, bytes.NewBufferString(in.Body)); e != nil {
-			return e
+			return nil, e
 		}
 
-		w.Flush()
+		if e := w.Flush(); e != nil {
+			return nil, e
+		}
 	}
 
 	config.Stores[today].Files[in.Msgid] = config.File{
 		Meta: in.Meta,
 	}
 	if e := config.Save(store); e != nil {
-		return e
+		return nil, e
 	}
 	stat := config.Stats[today].Files[in.Msgid]
 	stat.Age = store.Since()
@@ -86,33 +80,21 @@ func Post(w http.ResponseWriter, r *http.Request) error {
 	if config.Verbose {
 		fmt.Println("Saved " + in.Msgid)
 	}
-	httpd.FlushJson(w, httpd.DefaultResponse{
-		Status: true, Text: "Saved",
-	})
-	return nil
+	return fmt.Errorf("Saved %s", in.Msgid), nil
 }
 
-// Read msg by msgid
-func Get(w http.ResponseWriter, r *http.Request) error {
-	msgid := r.URL.Query().Get("msgid")
+func Read(in ReadInput, w io.Writer) (error, error) {
+	msgid := in.Msgid
+	readType := in.Type
+
 	if msgid == "" {
-		httpd.FlushJson(w, httpd.DefaultResponse{
-			Status: false, Text: "msgid not given",
-		})
-		return nil
+		return fmt.Errorf("No msgid given"), nil
 	}
-	readType := r.URL.Query().Get("type")
 	if readType == "" {
-		httpd.FlushJson(w, httpd.DefaultResponse{
-			Status: false, Text: "type not given",
-		})
-		return nil
+		return fmt.Errorf("No type given"), nil
 	}
 	if readType != "HEAD" && readType != "ARTICLE" && readType != "BODY" {
-		httpd.FlushJson(w, httpd.DefaultResponse{
-			Status: false, Text: "Type invalid value, valid=[HEAD, ARTICLE, BODY]",
-		})
-		return nil
+		return fmt.Errorf("Type invalid value, valid=[HEAD, ARTICLE, BODY]"), nil
 	}
 
 	// Check if data in one of the datasets
@@ -133,10 +115,7 @@ func Get(w http.ResponseWriter, r *http.Request) error {
 	if !ok {
 		msg := "Article not found msgid=" + msgid
 		fmt.Println("WARN: " + msg)
-		httpd.FlushJson(w, httpd.DefaultResponse{
-			Status: false, Text: msg,
-		})
-		return nil
+		return fmt.Errorf(msg), nil
 	}	
 
 	path := basedir + msgid + ".txt"
@@ -145,7 +124,7 @@ func Get(w http.ResponseWriter, r *http.Request) error {
 	}
 	f, e := os.Open(path)
 	if e != nil {
-		return e
+		return nil, e
 	}
 	defer func() {
 		if e := f.Close(); e != nil {
@@ -153,18 +132,17 @@ func Get(w http.ResponseWriter, r *http.Request) error {
 		}
 	}()
 
-	var in io.Reader	
-	in = bufio.NewReader(f)
+	var r io.Reader	
+	r = bufio.NewReader(f)
 	if readType == "HEAD" {
-		in = headreader.New(in)
+		r = headreader.New(r)
 	} else if readType == "BODY" {
-		in = bodyreader.New(in)
+		r = bodyreader.New(r)
 	}
 
-	w.Header().Set("Content-Type", "text/plain")
-	_, e = io.Copy(w, in)
+	_, e = io.Copy(w, r)
 	if e != nil {
-		return e
+		return nil, e
 	}
 
 	// Collect stats
@@ -179,21 +157,5 @@ func Get(w http.ResponseWriter, r *http.Request) error {
 		fmt.Println("WARN: Failed saving stats: " + e.Error())
 	}
 
-	return nil
-}
-
-func Msgid(w http.ResponseWriter, r *http.Request) {
-	var e error
-	if r.Method == "GET" {
-		e = Get(w, r)
-	} else if r.Method == "POST" {
-		e = Post(w, r)
-	} else {
-		httpd.FlushJson(w, httpd.DefaultResponse{Status: false, Text: "Unsupported HTTP Method=" + r.Method})
-	}
-
-	if e != nil {
-		fmt.Println("ERR: " + e.Error())
-		httpd.FlushJson(w, httpd.DefaultResponse{Status: false, Text: "Processing error"})
-	}
+	return nil, nil
 }
