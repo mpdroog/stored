@@ -56,6 +56,7 @@ func Get(w http.ResponseWriter, r *http.Request) error {
 		httpd.FlushJson(w, httpd.DefaultResponse{
 			Status: false, Text: usrErr.Error(),
 		})
+		return nil
 	}
 	defer read.Close()
 
