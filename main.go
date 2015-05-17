@@ -7,17 +7,26 @@ import (
 
 func main() {
 	configPath := ""
-	listen := ""
+	http := ""
+	nntp := ""
+
 	flag.BoolVar(&config.Verbose, "v", false, "Verbose-mode (log more)")
 	flag.StringVar(&configPath, "c", "./datastore", "Path to datastore")
-	flag.StringVar(&listen, "l", "0.0.0.0:9090", "Listen on ip:port")
+	flag.StringVar(&http, "h", "0.0.0.0:9090", "HTTP Listen on ip:port")
+	flag.StringVar(&nntp, "n", "0.0.0.0:0909", "NNTP Listen on ip:port")
 	flag.Parse()
 
 	if e := config.Init(configPath); e != nil {
 		panic(e)
 	}
 
-	if e := httpListen(listen); e != nil {
+	go func() {
+		if e := nntpListen(nntp); e != nil {
+			panic(e)
+		}
+	}()
+
+	if e := httpListen(http); e != nil {
 		panic(e)
 	}
 }
