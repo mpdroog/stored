@@ -7,6 +7,7 @@ import (
 	"stored/client"
 	"strings"
 	"stored/db"
+	"io"
 )
 
 func Quit(conn *client.Conn, tok []string) {
@@ -19,17 +20,37 @@ func Unsupported(conn *client.Conn, tok []string) {
 }
 
 func read(conn *client.Conn, msgid string, msgtype string) {
-	usrErr, sysErr := db.Read(
-		db.ReadInput{Msgid: msgid, Type: msgtype},
-		conn.GetWriter(),
+	read, usrErr, sysErr := db.Read(
+		db.ReadInput{Msgid: msgid[1:len(msgid)-1], Type: msgtype},
 	)
 	if sysErr != nil {
-		fmt.Println(sysErr.Error())
-		conn.Send("500 Failed forwarding")
+		fmt.Println("WARN: " + sysErr.Error())
+		conn.Send("500 Failed processing")
+		return
 	}
 	if usrErr != nil {
-		conn.Send("500 " + usrErr.Error())
+		conn.Send("400 " + usrErr.Error())
+		return
 	}
+	defer read.Close()
+
+	var code string
+	if msgtype == "ARTICLE" {
+		code = "220"
+	} else if msgtype == "HEAD" {
+		code = "221"
+	} else if msgtype == "BODY" {
+		code = "222"
+	} else {
+		panic("Should not get here")
+	}
+
+	conn.Send(code + " " + msgid)
+	if _, e := io.Copy(conn.GetWriter(), read); e != nil {
+		fmt.Println("WARN: " + e.Error())
+		conn.Send("500 Failed forwarding")
+	}
+	conn.Send("\r\n.") // additional \r\n auto-added
 }
 
 func Article(conn *client.Conn, tok []string) {

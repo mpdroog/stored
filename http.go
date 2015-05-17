@@ -10,6 +10,7 @@ import (
 
 	"encoding/json"
 	"stored/db"
+	"io"
 )
 
 var (
@@ -47,16 +48,19 @@ func Get(w http.ResponseWriter, r *http.Request) error {
 	in.Msgid = r.URL.Query().Get("msgid")
 	in.Type = r.URL.Query().Get("type")
 
-	usrErr, sysErr := db.Read(in, w)
+	read, usrErr, sysErr := db.Read(in)
 	if sysErr != nil {
 		return sysErr
 	}
 	if usrErr != nil {
 		httpd.FlushJson(w, httpd.DefaultResponse{
-			Status: true, Text: usrErr.Error(),
+			Status: false, Text: usrErr.Error(),
 		})
 	}
-	return nil
+	defer read.Close()
+
+	_, e := io.Copy(w, read)
+	return e
 }
 
 func Msgid(w http.ResponseWriter, r *http.Request) {

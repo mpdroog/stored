@@ -24,6 +24,14 @@ type ReadInput struct {
 	Type string
 }
 
+type ClosingDB struct {
+	fd *os.File
+	io.Reader
+}
+func (cb *ClosingDB) Close() error { 
+	return cb.fd.Close()
+}
+
 func Save(in SaveInput) (error, error) {
 	now := time.Now()
 	today := now.Format("2006-01-02")
@@ -83,18 +91,18 @@ func Save(in SaveInput) (error, error) {
 	return fmt.Errorf("Saved %s", in.Msgid), nil
 }
 
-func Read(in ReadInput, w io.Writer) (error, error) {
+func Read(in ReadInput) (io.ReadCloser, error, error) {
 	msgid := in.Msgid
 	readType := in.Type
 
 	if msgid == "" {
-		return fmt.Errorf("No msgid given"), nil
+		return nil, fmt.Errorf("No msgid given"), nil
 	}
 	if readType == "" {
-		return fmt.Errorf("No type given"), nil
+		return nil, fmt.Errorf("No type given"), nil
 	}
 	if readType != "HEAD" && readType != "ARTICLE" && readType != "BODY" {
-		return fmt.Errorf("Type invalid value, valid=[HEAD, ARTICLE, BODY]"), nil
+		return nil, fmt.Errorf("Type invalid value, valid=[HEAD, ARTICLE, BODY]"), nil
 	}
 
 	// Check if data in one of the datasets
@@ -115,7 +123,7 @@ func Read(in ReadInput, w io.Writer) (error, error) {
 	if !ok {
 		msg := "Article not found msgid=" + msgid
 		fmt.Println("CACHE_MISS: " + msg)
-		return fmt.Errorf(msg), nil
+		return nil, fmt.Errorf(msg), nil
 	}	
 
 	path := basedir + msgid + ".txt"
@@ -124,13 +132,8 @@ func Read(in ReadInput, w io.Writer) (error, error) {
 	}
 	f, e := os.Open(path)
 	if e != nil {
-		return nil, e
+		return nil, nil, e
 	}
-	defer func() {
-		if e := f.Close(); e != nil {
-			panic(e)
-		}
-	}()
 
 	var r io.Reader	
 	r = bufio.NewReader(f)
@@ -138,11 +141,6 @@ func Read(in ReadInput, w io.Writer) (error, error) {
 		r = headreader.New(r)
 	} else if readType == "BODY" {
 		r = bodyreader.New(r)
-	}
-
-	_, e = io.Copy(w, r)
-	if e != nil {
-		return nil, e
 	}
 
 	// Collect stats
@@ -157,5 +155,5 @@ func Read(in ReadInput, w io.Writer) (error, error) {
 		fmt.Println("WARN: Failed saving stats: " + e.Error())
 	}
 
-	return nil, nil
+	return &ClosingDB{f, r}, nil, nil
 }
