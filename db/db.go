@@ -114,13 +114,13 @@ func Read(in ReadInput, w io.Writer) (error, error) {
 	}
 	if !ok {
 		msg := "Article not found msgid=" + msgid
-		fmt.Println("WARN: " + msg)
+		fmt.Println("CACHE_MISS: " + msg)
 		return fmt.Errorf(msg), nil
 	}	
 
 	path := basedir + msgid + ".txt"
 	if config.Verbose {
-		fmt.Println("Read " + path)
+		fmt.Println("CACHE_HIT: Read " + path)
 	}
 	f, e := os.Open(path)
 	if e != nil {
