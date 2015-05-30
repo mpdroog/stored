@@ -49,6 +49,7 @@ func read(conn *client.Conn, msgid string, msgtype string) {
 	if _, e := io.Copy(conn.GetWriter(), read); e != nil {
 		fmt.Println("WARN: " + e.Error())
 		conn.Send("500 Failed forwarding")
+		return
 	}
 	conn.Send("\r\n.") // additional \r\n auto-added
 }
