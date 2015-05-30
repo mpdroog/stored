@@ -126,21 +126,25 @@ func Read(in ReadInput) (io.ReadCloser, error, error) {
 		return nil, fmt.Errorf(msg), nil
 	}	
 
-	path := basedir + msgid + ".txt"
-	if config.Verbose {
-		fmt.Println("CACHE_HIT: Read " + path)
-	}
-	f, e := os.Open(path)
-	if e != nil {
-		return nil, nil, e
-	}
+	var f *os.File
+	var r io.Reader
+	if config.MetaOnly {
+		path := basedir + msgid + ".txt"
+		if config.Verbose {
+			fmt.Println("CACHE_HIT: Read " + path)
+		}
+		var e error
+		f, e = os.Open(path)
+		if e != nil {
+			return nil, nil, e
+		}
 
-	var r io.Reader	
-	r = bufio.NewReader(f)
-	if readType == "HEAD" {
-		r = headreader.New(r)
-	} else if readType == "BODY" {
-		r = bodyreader.New(r)
+		r = bufio.NewReader(f)
+		if readType == "HEAD" {
+			r = headreader.New(r)
+		} else if readType == "BODY" {
+			r = bodyreader.New(r)
+		}
 	}
 
 	// Collect stats

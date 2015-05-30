@@ -37,6 +37,7 @@ type Stat struct {
 }
 
 var (
+	MetaOnly    bool
 	Stats       map[string]Stat
 	Stores      map[string]DB
 	Verbose     bool
