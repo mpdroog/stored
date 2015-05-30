@@ -51,7 +51,7 @@ func Save(in SaveInput) (error, error) {
 	}
 
 	// Write to FS
-	{
+	if !config.MetaOnly {
 		f, e := os.Create(store.Basedir + in.Msgid + ".txt")
 		if e != nil {
 			return nil, e
