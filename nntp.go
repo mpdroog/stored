@@ -137,6 +137,19 @@ func Takethis(conn *client.Conn, tok []string) {
 	conn.Send("239 " + msgid)
 }
 
+func Mode(conn *client.Conn, tok []string) {
+	if len(tok) != 2 {
+		conn.Send("501 Invalid syntax.")
+		return
+	}
+	if tok[1] != "STREAM" {
+		conn.Send("400 Server only supports streaming.")
+		return
+	}
+
+	conn.Send("203 Streaming permitted")
+}
+
 func req(conn *client.Conn) {
 	conn.Send("200 StoreD")
 	for {
@@ -161,6 +174,8 @@ func req(conn *client.Conn) {
 			Check(conn, tok)
 		} else if (cmd == "TAKETHIS") {
 			Takethis(conn, tok)
+		} else if (cmd == "MODE") {
+			Mode(conn, tok)
 		} else {
 			Unsupported(conn, tok)
 			break
