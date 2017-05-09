@@ -158,9 +158,6 @@ func req(conn *client.Conn) {
 			fmt.Println(fmt.Sprintf("WARN: C(%s): %s", conn.RemoteAddr(), e.Error()))
 			break
 		}
-		if config.Verbose {
-			fmt.Printf("C(%s): %s\n", conn.RemoteAddr(), tok)
-		}
 
 		// TODO: close conn on error?
 		cmd := strings.ToUpper(tok[0])
