@@ -142,7 +142,7 @@ func Mode(conn *client.Conn, tok []string) {
 		conn.Send("501 Invalid syntax.")
 		return
 	}
-	if tok[1] != "STREAM" {
+	if strings.ToUpper(tok[1]) != "STREAM" {
 		conn.Send("501 Unknown MODE variant")
 		return
 	}
