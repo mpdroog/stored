@@ -17,7 +17,7 @@ func Quit(conn *client.Conn, tok []string) {
 }
 
 func Unsupported(conn *client.Conn, tok []string) {
-	fmt.Println(fmt.Sprintf("WARN: C(%s): Unsupported cmd %s", conn.RemoteAddr(), tok[0]))
+	fmt.Println(fmt.Sprintf("WARN: C(%s): Unsupported cmd=%s", conn.RemoteAddr(), tok))
 	conn.Send("500 Unsupported command")
 }
 
