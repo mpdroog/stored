@@ -143,7 +143,7 @@ func Mode(conn *client.Conn, tok []string) {
 		return
 	}
 	if tok[1] != "STREAM" {
-		conn.Send("400 Server only supports streaming.")
+		conn.Send("501 Unknown MODE variant")
 		return
 	}
 
@@ -157,6 +157,9 @@ func req(conn *client.Conn) {
 		if e != nil {
 			fmt.Println(fmt.Sprintf("WARN: C(%s): %s", conn.RemoteAddr(), e.Error()))
 			break
+		}
+		if config.Verbose {
+			fmt.Printf("C(%s): %s\n", conn.RemoteAddr(), tok)
 		}
 
 		// TODO: close conn on error?
