@@ -4,7 +4,7 @@ import (
 	"bufio"
 	"fmt"
 	"net"
-	"nntpd/config"
+	"stored/config"
 	"strings"
 	"io"
 	"stored/rawio"
