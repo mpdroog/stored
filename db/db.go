@@ -33,6 +33,14 @@ func (cb *ClosingDB) Close() error {
 }
 
 func Save(in SaveInput) (error, error) {
+	usrErr, sysErr := SaveClean(in)
+	if usrErr == nil && sysErr == nil {
+		return fmt.Errorf("Saved " + in.Msgid), nil
+	}
+	return usrErr, sysErr
+}
+
+func SaveClean(in SaveInput) (error, error) {
 	now := time.Now()
 	today := now.Format("2006-01-02")
 
@@ -88,7 +96,7 @@ func Save(in SaveInput) (error, error) {
 	if config.Verbose {
 		fmt.Println("Saved " + in.Msgid)
 	}
-	return fmt.Errorf("Saved %s", in.Msgid), nil
+	return nil, nil
 }
 
 func Read(in ReadInput) (io.ReadCloser, error, error) {
@@ -128,7 +136,7 @@ func Read(in ReadInput) (io.ReadCloser, error, error) {
 
 	var f *os.File
 	var r io.Reader
-	if config.MetaOnly {
+	//if config.MetaOnly {
 		path := basedir + msgid + ".txt"
 		if config.Verbose {
 			fmt.Println("CACHE_HIT: Read " + path)
@@ -145,7 +153,7 @@ func Read(in ReadInput) (io.ReadCloser, error, error) {
 		} else if readType == "BODY" {
 			r = bodyreader.New(r)
 		}
-	}
+	//}
 
 	// Collect stats
 	s, ok := config.Stats[date].Files[msgid]
@@ -160,4 +168,19 @@ func Read(in ReadInput) (io.ReadCloser, error, error) {
 	}
 
 	return &ClosingDB{f, r}, nil, nil
+}
+
+// Check if data in one of the datasets
+func Lookup(msgid string) (bool, error) {
+	var (
+		found bool
+		store config.DB
+	)
+	for _, store = range config.Stores {
+		_, found = store.Files[msgid]
+		if found {
+			break
+		}
+	}
+	return found, nil
 }

@@ -7,7 +7,7 @@ import (
 	"nntpd/config"
 	"strings"
 	"io"
-	"nntpd/rawio"
+	"stored/rawio"
 )
 
 const EOF = "\r\n"
@@ -55,7 +55,7 @@ func (c *Conn) LocalAddr() string {
 
 // Get DotReader
 func (c *Conn) GetReader() io.Reader {
-	return rawio.New(c.r)
+	return rawio.New(c.r, false)
 }
 
 func (c *Conn) GetWriter() io.Writer {

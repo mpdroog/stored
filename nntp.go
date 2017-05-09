@@ -1,12 +1,14 @@
 package main
 
 import (
+	"bytes"
 	"fmt"
 	"stored/config"
 	"net"
 	"stored/client"
 	"strings"
 	"stored/db"
+	"stored/rawio"
 	"io"
 )
 
@@ -78,6 +80,63 @@ func Body(conn *client.Conn, tok []string) {
 	read(conn, tok[1], "BODY")
 }
 
+func Check(conn *client.Conn, tok []string) {
+	if len(tok) != 2 {
+		conn.Send("501 Invalid syntax.")
+		return
+	}
+	msgid := tok[1]
+	if msgid[0] != '<' || msgid[len(msgid)-1] != '>' {
+		conn.Send("501 Only accepting msgids")
+		return
+	}
+
+	found, e := db.Lookup(msgid[1:len(msgid)-1])
+	if e != nil {
+		conn.Send("431 " + msgid + " Transfer not possible; try again later")
+		return
+	}
+	if found {
+		conn.Send("438 " + msgid + " Article not wanted (already have it)")
+		return
+	}
+
+	// Start reading input
+	conn.Send("238 " + msgid + " Send article to be transferred")
+}
+
+func Takethis(conn *client.Conn, tok []string) {
+	if len(tok) != 2 {
+		conn.Send("501 Invalid syntax.")
+		return
+	}
+	msgid := tok[1]
+	in := db.SaveInput{
+		Msgid: msgid[1:len(msgid)-1],
+	}
+
+	b := new(bytes.Buffer)
+	if _, e := io.Copy(b, conn.GetReader()); e != nil {
+		conn.Send("400 Failed reading input")
+		return
+	}
+	in.Body = b.String()
+	// strip off \r\n.\r\n
+	in.Body = in.Body[:len(in.Body) - len(rawio.END)]
+
+	usrErr, sysErr := db.SaveClean(in)
+	if sysErr != nil {
+		conn.Send("400 Failed storing, reason="+sysErr.Error())
+		return
+	}
+	if usrErr != nil {
+		conn.Send("400 Failed storing, reason="+usrErr.Error())
+		return
+	}
+
+	conn.Send("239 " + msgid)
+}
+
 func req(conn *client.Conn) {
 	conn.Send("200 StoreD")
 	for {
@@ -87,6 +146,7 @@ func req(conn *client.Conn) {
 			break
 		}
 
+		// TODO: close conn on error?
 		cmd := strings.ToUpper(tok[0])
 		if cmd == "QUIT" {
 			Quit(conn, tok)
@@ -97,6 +157,10 @@ func req(conn *client.Conn) {
 			Head(conn, tok)
 		} else if cmd == "BODY" {
 			Body(conn, tok)
+		} else if cmd == "CHECK" {
+			Check(conn, tok)
+		} else if (cmd == "TAKETHIS") {
+			Takethis(conn, tok)
 		} else {
 			Unsupported(conn, tok)
 			break

@@ -14,7 +14,7 @@ func main() {
 	flag.BoolVar(&config.MetaOnly, "m", false, "Only save metadata")
 	flag.StringVar(&configPath, "c", "./datastore", "Path to datastore")
 	flag.StringVar(&http, "h", "0.0.0.0:9090", "HTTP Listen on ip:port")
-	flag.StringVar(&nntp, "n", "0.0.0.0:0909", "NNTP Listen on ip:port")
+	flag.StringVar(&nntp, "n", "0.0.0.0:9091", "NNTP Listen on ip:port")
 	flag.Parse()
 
 	if e := config.Init(configPath); e != nil {
