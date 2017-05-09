@@ -4,9 +4,9 @@ import (
 	"stored/config"
 	"fmt"
 	"net/http"
-	"github.com/xsnews/webutils/middleware"
-	"github.com/xsnews/webutils/muxdoc"
-	"github.com/xsnews/webutils/httpd"
+	"github.com/itshosted/webutils/middleware"
+	"github.com/itshosted/webutils/muxdoc"
+	"github.com/itshosted/webutils/httpd"
 
 	"encoding/json"
 	"stored/db"
