@@ -80,6 +80,56 @@ func Body(conn *client.Conn, tok []string) {
 	read(conn, tok[1], "BODY")
 }
 
+func Ihave(conn *client.Conn, tok []string) {
+	if len(tok) != 2 {
+		conn.Send("501 Invalid syntax.")
+		return
+	}
+	msgid := tok[1]
+	if msgid[0] != '<' || msgid[len(msgid)-1] != '>' {
+		conn.Send("501 Only accepting msgids")
+		return
+	}
+
+	found, e := db.Lookup(msgid[1:len(msgid)-1])
+	if e != nil {
+		conn.Send("436 " + msgid + " Transfer not possible; try again later")
+		return
+	}
+	if found {
+		conn.Send("435 " + msgid + " Article not wanted (already have it)")
+		return
+	}
+
+	// Send them we accept it
+	conn.Send("335 " + msgid + " Send article to be transferred")
+
+	// Start reading
+	in := db.SaveInput{
+		Msgid: msgid[1:len(msgid)-1],
+	}
+	b := new(bytes.Buffer)
+	if _, e := io.Copy(b, conn.GetReader()); e != nil {
+		conn.Send("436 Failed reading input")
+		return
+	}
+	in.Body = b.String()
+	// strip off \r\n.\r\n
+	in.Body = in.Body[:len(in.Body) - len(rawio.END)]
+
+	usrErr, sysErr := db.SaveClean(in)
+	if sysErr != nil {
+		conn.Send("436 Failed storing, reason="+sysErr.Error())
+		return
+	}
+	if usrErr != nil {
+		conn.Send("436 Failed storing, reason="+usrErr.Error())
+		return
+	}
+
+	conn.Send("235 " + msgid)
+}
+
 func Check(conn *client.Conn, tok []string) {
 	if len(tok) != 2 {
 		conn.Send("501 Invalid syntax.")
@@ -170,6 +220,8 @@ func req(conn *client.Conn) {
 			Head(conn, tok)
 		} else if cmd == "BODY" {
 			Body(conn, tok)
+		} else if cmd == "IHAVE" {
+			Ihave(conn, tok)
 		} else if cmd == "CHECK" {
 			Check(conn, tok)
 		} else if (cmd == "TAKETHIS") {
