@@ -119,7 +119,7 @@ retry:
 			if config.Verbose {
 				log.Printf("msgid(%s) saved to %s\n", msgid, disk.Mountpoint+filepath)
 			}
-			return appendLog(msgid+"\r\n")
+			return appendLog(disk.Name, msgid+"\r\n")
 		}
 
 		// Create directory on error (Trick to keep disk I/O low)

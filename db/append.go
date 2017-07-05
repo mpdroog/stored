@@ -9,8 +9,8 @@ import (
 	"log"
 )
 
-func appendLog(msg string) error {
-	fpath := fmt.Sprintf("%s%s/incoming.log", config.C.General.IncomingLog, time.Now().Format("2006-01-02"))
+func appendLog(disk, msg string) error {
+	fpath := fmt.Sprintf("%s%s/%s/incoming.log", config.C.General.IncomingLog, disk, time.Now().Format("2006-01-02"))
 
 	isCreated := false
 retry:
