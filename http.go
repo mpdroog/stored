@@ -35,6 +35,26 @@ func doc(w http.ResponseWriter, r *http.Request) {
 	fmt.Fprintf(w, mux.String())
 }
 
+// Remove msg to DB
+func Delete(w http.ResponseWriter, r *http.Request) error {
+	defer r.Body.Close()
+
+	msgid := r.URL.Query().Get("msgid")
+	if msgid == "" {
+		return fmt.Errorf("Missing arg msgid")
+	}
+
+	e := db.Delete(msgid)
+	if e != nil {
+		return e
+	}
+
+	httpd.FlushJson(w, httpd.DefaultResponse{
+		Status: true, Text: "Removed",
+	})
+	return nil
+}
+
 // Add msg to DB
 func Post(w http.ResponseWriter, r *http.Request) error {
 	defer r.Body.Close()
@@ -109,6 +129,8 @@ func Msgid(w http.ResponseWriter, r *http.Request) {
 		e = Get(w, r)
 	} else if r.Method == "POST" {
 		e = Post(w, r)
+	} else if r.Method == "DELETE" {
+		e = Delete(w, r)
 	} else {
 		httpd.FlushJson(w, httpd.DefaultResponse{Status: false, Text: "Unsupported HTTP Method=" + r.Method})
 	}
