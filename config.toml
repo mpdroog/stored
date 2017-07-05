@@ -1,0 +1,14 @@
+[general]
+http_listen=["0.0.0.0:9090"]
+nntp_listen=["0.0.0.0:9091"]
+
+# WARN: NEVER remove a spool from this list
+# but set it to disabled so disk I/O is kept low
+[[storage]]
+mountpoint="./datastore/2017-05-09"
+minfree="100GB"
+disabled=true
+
+[[storage]]
+mountpoint="./datastore/2017-07-05"
+minfree="100GB"

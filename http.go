@@ -1,6 +1,7 @@
 package main
 
 import (
+	"bytes"
 	"stored/config"
 	"fmt"
 	"net/http"
@@ -11,11 +12,21 @@ import (
 	"encoding/json"
 	"stored/db"
 	"io"
+
+	"stored/headreader"
+	"stored/bodyreader"
+	"log"
+	"encoding/base64"
 )
 
 var (
 	mux    muxdoc.MuxDoc
 )
+
+type SaveInput struct {
+	Msgid string
+	Body string
+}
 
 // Return API Documentation (paths)
 func doc(w http.ResponseWriter, r *http.Request) {
@@ -27,40 +38,68 @@ func doc(w http.ResponseWriter, r *http.Request) {
 // Add msg to DB
 func Post(w http.ResponseWriter, r *http.Request) error {
 	defer r.Body.Close()
-	var in db.SaveInput
-	if e := json.NewDecoder(r.Body).Decode(&in); e != nil {
+
+	var (
+		in SaveInput
+		e error
+	)
+	if e = json.NewDecoder(r.Body).Decode(&in); e != nil {
 		return e
 	}
-	usrErr, sysErr := db.Save(in)
-	if sysErr != nil {
-		return sysErr
+	if config.Verbose {
+		log.Printf("http.Post %+v\n", in)
+	}
+
+	raw, e := base64.StdEncoding.DecodeString(in.Body)
+	if e != nil {
+		return e
+	}
+	if e := db.Save(in.Msgid, bytes.NewBuffer(raw)); e != nil {
+		return e
 	}
 
 	httpd.FlushJson(w, httpd.DefaultResponse{
-		Status: true, Text: usrErr.Error(),
+		Status: true, Text: "Saved",
 	})
 	return nil
 }
 
 // Read msg by msgid
 func Get(w http.ResponseWriter, r *http.Request) error {
-	var in db.ReadInput
-	in.Msgid = r.URL.Query().Get("msgid")
-	in.Type = r.URL.Query().Get("type")
+	msgid := r.URL.Query().Get("msgid")
+	msgtype := r.URL.Query().Get("type")
 
-	read, usrErr, sysErr := db.Read(in)
-	if sysErr != nil {
-		return sysErr
+	//Load(msgid string) (*bytes.Buffer, error) {
+	buf, e := db.Load(msgid)
+	if e != nil {
+		return e
 	}
-	if usrErr != nil {
+	if buf == nil {
+		// Nothing to send
 		httpd.FlushJson(w, httpd.DefaultResponse{
-			Status: false, Text: usrErr.Error(),
+			Status: false, Text: "No such article",
 		})
 		return nil
 	}
-	defer read.Close()
 
-	_, e := io.Copy(w, read)
+	var in io.Reader
+	if msgtype == "ARTICLE" {
+		in = buf
+
+	} else if msgtype == "HEAD" {
+		in = headreader.New(buf)
+
+	} else if msgtype == "BODY" {
+		in = bodyreader.New(buf)
+
+	} else {
+		httpd.FlushJson(w, httpd.DefaultResponse{
+			Status: false, Text: "Invalid msgtype, valid=[ARTICLE, HEAD, BODY]",
+		})
+		return nil
+	}
+
+	_, e = io.Copy(w, in)
 	return e
 }
 
@@ -75,7 +114,7 @@ func Msgid(w http.ResponseWriter, r *http.Request) {
 	}
 
 	if e != nil {
-		fmt.Println("ERR: " + e.Error())
+		log.Printf("ERR: %s\n", e.Error())
 		httpd.FlushJson(w, httpd.DefaultResponse{Status: false, Text: "Processing error"})
 	}
 }
@@ -91,7 +130,7 @@ func httpListen(listen string) error {
 	// TODO: Catch CTRL+C
 
 	if config.Verbose {
-		fmt.Println("stored listening on " + listen)
+		log.Printf("httpd listening on %s\n", listen)
 	}
 	return http.ListenAndServe(listen, nil)
 }

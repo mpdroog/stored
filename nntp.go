@@ -2,7 +2,6 @@ package main
 
 import (
 	"bytes"
-	"fmt"
 	"stored/config"
 	"net"
 	"stored/client"
@@ -10,6 +9,10 @@ import (
 	"stored/db"
 	"stored/rawio"
 	"io"
+	"log"
+
+	"stored/headreader"
+	"stored/bodyreader"
 )
 
 func Quit(conn *client.Conn, tok []string) {
@@ -17,40 +20,44 @@ func Quit(conn *client.Conn, tok []string) {
 }
 
 func Unsupported(conn *client.Conn, tok []string) {
-	fmt.Println(fmt.Sprintf("WARN: C(%s): Unsupported cmd=%s", conn.RemoteAddr(), tok))
+	log.Printf("WARN: C(%s): Unsupported cmd=%s\n", conn.RemoteAddr(), tok)
 	conn.Send("500 Unsupported command")
 }
 
 func read(conn *client.Conn, msgid string, msgtype string) {
-	read, usrErr, sysErr := db.Read(
-		db.ReadInput{Msgid: msgid[1:len(msgid)-1], Type: msgtype},
-	)
-	if sysErr != nil {
-		fmt.Println("WARN: " + sysErr.Error())
-		conn.Send("500 Failed processing")
-		return
+	// Load(msgid string) (*bytes.Buffer, error) {
+	buf, e := db.Load(msgid)
+	if e != nil {
+		log.Printf("db.Load(%s) e=%s\n", msgid, e.Error())
+		conn.Send("500 Failed loading")
 	}
-	if usrErr != nil {
-		conn.Send("400 " + usrErr.Error())
-		return
+	if buf == nil {
+		conn.Send("400 No such article")
 	}
-	defer read.Close()
 
+	// Put reader around it?
+	var in io.Reader
 	var code string
 	if msgtype == "ARTICLE" {
 		code = "220"
+		in = buf
+
 	} else if msgtype == "HEAD" {
 		code = "221"
+		in = headreader.New(buf)
+
 	} else if msgtype == "BODY" {
 		code = "222"
+		in = bodyreader.New(buf)
+
 	} else {
 		panic("Should not get here")
 	}
 
 	conn.Send(code + " " + msgid)
-	if _, e := io.Copy(conn.GetWriter(), read); e != nil {
-		fmt.Println("WARN: " + e.Error())
-		conn.Send("500 Failed forwarding")
+	if _, e := io.Copy(conn.GetWriter(), in); e != nil {
+		log.Printf("CRIT: %s\n", e.Error())
+		// TODO: conn.close?
 		return
 	}
 	conn.Send("\r\n.") // additional \r\n auto-added
@@ -86,12 +93,7 @@ func Ihave(conn *client.Conn, tok []string) {
 		return
 	}
 	msgid := tok[1]
-	if msgid[0] != '<' || msgid[len(msgid)-1] != '>' {
-		conn.Send("501 Only accepting msgids")
-		return
-	}
-
-	found, e := db.Lookup(msgid[1:len(msgid)-1])
+	found, e := db.Exists(msgid)
 	if e != nil {
 		conn.Send("436 " + msgid + " Transfer not possible; try again later")
 		return
@@ -104,26 +106,16 @@ func Ihave(conn *client.Conn, tok []string) {
 	// Send them we accept it
 	conn.Send("335 " + msgid + " Send article to be transferred")
 
-	// Start reading
-	in := db.SaveInput{
-		Msgid: msgid[1:len(msgid)-1],
-	}
 	b := new(bytes.Buffer)
 	if _, e := io.Copy(b, conn.GetReader()); e != nil {
 		conn.Send("436 Failed reading input")
 		return
 	}
-	in.Body = b.String()
-	// strip off \r\n.\r\n
-	in.Body = in.Body[:len(in.Body) - len(rawio.END)]
+	r := b.Bytes()
+	b = bytes.NewBuffer(r[:len(r) - len(rawio.END)])
 
-	usrErr, sysErr := db.SaveClean(in)
-	if sysErr != nil {
-		conn.Send("436 Failed storing, reason="+sysErr.Error())
-		return
-	}
-	if usrErr != nil {
-		conn.Send("436 Failed storing, reason="+usrErr.Error())
+	if e := db.Save(msgid, b); e != nil {
+		conn.Send("436 Failed storing e=" + e.Error())
 		return
 	}
 
@@ -136,12 +128,7 @@ func Check(conn *client.Conn, tok []string) {
 		return
 	}
 	msgid := tok[1]
-	if msgid[0] != '<' || msgid[len(msgid)-1] != '>' {
-		conn.Send("501 Only accepting msgids")
-		return
-	}
-
-	found, e := db.Lookup(msgid[1:len(msgid)-1])
+	found, e := db.Exists(msgid)
 	if e != nil {
 		conn.Send("431 " + msgid + " Transfer not possible; try again later")
 		return
@@ -161,26 +148,17 @@ func Takethis(conn *client.Conn, tok []string) {
 		return
 	}
 	msgid := tok[1]
-	in := db.SaveInput{
-		Msgid: msgid[1:len(msgid)-1],
-	}
-
 	b := new(bytes.Buffer)
 	if _, e := io.Copy(b, conn.GetReader()); e != nil {
-		conn.Send("400 Failed reading input")
+		conn.Send("400 Failed reading input") // TODO: wrong code?
 		return
 	}
-	in.Body = b.String()
-	// strip off \r\n.\r\n
-	in.Body = in.Body[:len(in.Body) - len(rawio.END)]
 
-	usrErr, sysErr := db.SaveClean(in)
-	if sysErr != nil {
-		conn.Send("400 Failed storing, reason="+sysErr.Error())
-		return
-	}
-	if usrErr != nil {
-		conn.Send("400 Failed storing, reason="+usrErr.Error())
+	r := b.Bytes()
+	b = bytes.NewBuffer(r[:len(r) - len(rawio.END)])
+
+	if e := db.Save(msgid, b); e != nil {
+		conn.Send("400 Failed storing e=" + e.Error()) // TODO: wrong code?
 		return
 	}
 
@@ -205,7 +183,7 @@ func req(conn *client.Conn) {
 	for {
 		tok, e := conn.ReadLine()
 		if e != nil {
-			fmt.Println(fmt.Sprintf("WARN: C(%s): %s", conn.RemoteAddr(), e.Error()))
+			log.Printf("WARN: C(%s): %s\n", conn.RemoteAddr(), e.Error())
 			break
 		}
 
@@ -236,7 +214,7 @@ func req(conn *client.Conn) {
 
 	conn.Close()
 	if config.Verbose {
-		fmt.Println(fmt.Sprintf("C(%s) Closed", conn.RemoteAddr()))
+		log.Printf("C(%s) Closed\n", conn.RemoteAddr())
 	}
 }
 
@@ -246,7 +224,7 @@ func nntpListen(listen string) error {
 		return err
 	}
 	if config.Verbose {
-		fmt.Println("nntpd listening on " + listen)
+		log.Printf("nntpd listening on %s\n", listen)
 	}
 
 	for {
@@ -255,7 +233,7 @@ func nntpListen(listen string) error {
 			panic(err)
 		}
 		if config.Verbose {
-			fmt.Println(fmt.Sprintf("C(%s) New", conn.RemoteAddr()))
+			log.Printf("C(%s) New\n", conn.RemoteAddr())
 		}
 
 		go req(client.New(conn))

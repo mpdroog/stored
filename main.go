@@ -3,31 +3,29 @@ package main
 import (
 	"stored/config"
 	"flag"
+	"log"
 )
 
 func main() {
 	configPath := ""
-	http := ""
-	nntp := ""
-
 	flag.BoolVar(&config.Verbose, "v", false, "Verbose-mode (log more)")
-	flag.BoolVar(&config.MetaOnly, "m", false, "Only save metadata")
-	flag.StringVar(&configPath, "c", "./datastore", "Path to datastore")
-	flag.StringVar(&http, "h", "0.0.0.0:9090", "HTTP Listen on ip:port")
-	flag.StringVar(&nntp, "n", "0.0.0.0:9091", "NNTP Listen on ip:port")
+	flag.StringVar(&configPath, "c", "./config.toml", "Path to config.toml")
 	flag.Parse()
 
 	if e := config.Init(configPath); e != nil {
 		panic(e)
 	}
+	if config.Verbose {
+		log.Printf("Config=%+v\n", config.C)
+	}
 
 	go func() {
-		if e := nntpListen(nntp); e != nil {
+		if e := nntpListen(config.C.General.NNTPListen[0]); e != nil {
 			panic(e)
 		}
 	}()
 
-	if e := httpListen(http); e != nil {
+	if e := httpListen(config.C.General.HTTPListen[0]); e != nil {
 		panic(e)
 	}
 }
