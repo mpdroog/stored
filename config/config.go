@@ -18,6 +18,7 @@ type Config struct {
 	General struct {
 		HTTPListen []string `toml:"http_listen"`
 		NNTPListen []string `toml:"nntp_listen"`
+		IncomingLog string `toml:"incoming_log"`
 	}
 	Storage []Disk
 }
@@ -60,6 +61,9 @@ func parseConfig() (e error) {
 	}
 	if len(C.General.NNTPListen) != 1 {
 		return fmt.Errorf("HttpListen only supports 1 listener")
+	}
+	if !strings.HasSuffix(C.General.IncomingLog, "/") {
+		C.General.IncomingLog += "/"
 	}
 
 	for i, disk := range C.Storage {

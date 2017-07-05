@@ -70,6 +70,17 @@ func Post(w http.ResponseWriter, r *http.Request) error {
 		log.Printf("http.Post %+v\n", in)
 	}
 
+	found, e := db.Exists(in.Msgid)
+	if e != nil {
+		return e
+	}
+	if found {
+		httpd.FlushJson(w, httpd.DefaultResponse{
+			Status: false, Text: "Already have this msg",
+		})
+		return nil
+	}
+
 	raw, e := base64.StdEncoding.DecodeString(in.Body)
 	if e != nil {
 		return e
