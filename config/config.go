@@ -7,12 +7,15 @@ import (
 	"log"
 	"fmt"
 	"strings"
+	"strconv"
 )
 
 type Disk struct {
 	Mountpoint string
 	Minfree string
+	MinfreeGB float64
 	Disabled bool
+	Name string
 }
 type Config struct {
 	General struct {
@@ -66,6 +69,7 @@ func parseConfig() (e error) {
 		C.General.IncomingLog += "/"
 	}
 
+	names := make(map[string]bool)
 	for i, disk := range C.Storage {
 		if disk.Disabled {
 			continue
@@ -81,6 +85,22 @@ func parseConfig() (e error) {
 		if !strings.HasSuffix(disk.Mountpoint, "/") {
 			C.Storage[i].Mountpoint += "/"
 		}
+		if !strings.HasSuffix(disk.Minfree, "GB") {
+			return fmt.Errorf("Mountpoint(%s) only support GB at the moment", disk.Mountpoint)
+		}
+		minfree, e := strconv.Atoi(C.Storage[i].Minfree[:len(C.Storage[i].Minfree)-2])
+		if e != nil {
+			return e
+		}
+		C.Storage[i].MinfreeGB = float64(minfree)
+		if e != nil {
+			return e
+		}
+
+		if _, ok := names[ disk.Name ]; ok {
+			return fmt.Errorf("Mountpoint(%s) has a duplicate name=%s", disk.Mountpoint, disk.Name)
+		}
+		names[disk.Name] = true
 	}
 	return
 }
