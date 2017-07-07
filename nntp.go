@@ -30,9 +30,11 @@ func read(conn *client.Conn, msgid string, msgtype string) {
 	if e != nil {
 		log.Printf("db.Load(%s) e=%s\n", msgid, e.Error())
 		conn.Send("500 Failed loading")
+		return
 	}
 	if buf == nil {
 		conn.Send("400 No such article")
+		return
 	}
 
 	// Put reader around it?
