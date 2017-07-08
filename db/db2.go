@@ -32,6 +32,9 @@ func lookup(msgid string) (string, error) {
 		_, e := os.Stat(disk.Mountpoint+path)
 		if os.IsNotExist(e) {
 			// File not found, try next disk
+			if config.Verbose {
+				log.Printf("msgid(%s) not on disk %s\n", msgid, disk.Mountpoint+path)
+			}
 			continue
 		}
 		if e != nil {

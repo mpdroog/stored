@@ -57,10 +57,16 @@ func read(conn *client.Conn, msgid string, msgtype string) {
 	}
 
 	conn.Send(code + " " + msgid)
+	if config.Verbose {
+		log.Printf("read(%s) start streamreader\n", msgid)
+	}
 	if _, e := io.Copy(conn.GetWriter(), in); e != nil {
 		log.Printf("CRIT: %s\n", e.Error())
 		// TODO: conn.close?
 		return
+	}
+	if config.Verbose {
+		log.Printf("read(%s) finish streamreader\n", msgid)
 	}
 	conn.Send("\r\n.") // additional \r\n auto-added
 }
@@ -108,11 +114,18 @@ func Ihave(conn *client.Conn, tok []string) {
 	// Send them we accept it
 	conn.Send("335 " + msgid + " Send article to be transferred")
 
+	if config.Verbose {
+		log.Printf("ihave(%s) start streamreader\n", msgid)
+	}
 	b := new(bytes.Buffer)
 	if _, e := io.Copy(b, conn.GetReader()); e != nil {
 		conn.Send("436 Failed reading input")
 		return
 	}
+	if config.Verbose {
+		log.Printf("ihave(%s) finish streamreader\n", msgid)
+	}
+
 	r := b.Bytes()
 	b = bytes.NewBuffer(r[:len(r) - len(rawio.END)])
 
@@ -121,7 +134,7 @@ func Ihave(conn *client.Conn, tok []string) {
 		return
 	}
 
-	conn.Send("235 " + msgid)
+	conn.Send("235 " + msgid + " Article accepted")
 }
 
 func Check(conn *client.Conn, tok []string) {
@@ -150,21 +163,32 @@ func Takethis(conn *client.Conn, tok []string) {
 		return
 	}
 	msgid := tok[1]
+
+	if config.Verbose {
+		log.Printf("takethis(%s) start streamreader\n", msgid)
+	}
 	b := new(bytes.Buffer)
 	if _, e := io.Copy(b, conn.GetReader()); e != nil {
-		conn.Send("400 Failed reading input") // TODO: wrong code?
+		log.Printf("Takethis(%s) io.Copy=%s", msgid, e.Error())
+		conn.Send("400 Failed reading input")
+		conn.Close()
 		return
+	}
+	if config.Verbose {
+		log.Printf("takethis(%s) finish streamreader\n", msgid)
 	}
 
 	r := b.Bytes()
 	b = bytes.NewBuffer(r[:len(r) - len(rawio.END)])
 
 	if e := db.Save(msgid, b); e != nil {
-		conn.Send("400 Failed storing e=" + e.Error()) // TODO: wrong code?
+		log.Printf("Takethis(%s) db.Save=%s", msgid, e.Error())
+		conn.Send("400 Failed storing")
+		conn.Close()
 		return
 	}
 
-	conn.Send("239 " + msgid)
+	conn.Send("239 " + msgid + " Article transferred OK")
 }
 
 func Mode(conn *client.Conn, tok []string) {

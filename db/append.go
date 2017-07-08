@@ -29,8 +29,8 @@ retry:
 		}
 		return e
 	}
-	defer f.Close()
 
-	_, e = f.WriteString(msg);
+	_, e = f.WriteString(msg)
+	f.Close()
 	return e
 }
