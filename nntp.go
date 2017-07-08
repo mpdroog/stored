@@ -34,7 +34,7 @@ func read(conn *client.Conn, msgid string, msgtype string) {
 		return
 	}
 	if buf == nil {
-		conn.Send("400 No such article")
+		conn.Send("430 No such article")
 		return
 	}
 
@@ -213,6 +213,27 @@ func Date(conn *client.Conn, tok []string) {
 	conn.Send("111 " + time.Now().UTC().Format("20060102150405"))
 }
 
+func Stat(conn *client.Conn, tok []string) {
+	if len(tok) != 2 {
+		conn.Send("501 Invalid syntax.")
+		return
+	}
+	msgid := tok[1]
+	found, e := db.Exists(msgid)
+	if e != nil {
+		log.Printf("Stat(%s) db.Exists=%s\n", msgid, e.Error())
+		conn.Send("430 " + msgid + " Transfer not possible; try again later")
+		return
+	}
+	if found {
+		conn.Send("223 0 " + msgid)
+		return
+	} else {
+		conn.Send("430 Not Found")
+	}
+
+}
+
 func req(conn *client.Conn) {
 	conn.Send("200 StoreD")
 	for {
@@ -243,6 +264,8 @@ func req(conn *client.Conn) {
 			Mode(conn, tok)
 		} else if cmd == "DATE" {
 			Date(conn, tok)
+		} else if cmd == "STAT" {
+			Stat(conn, tok)
 		} else {
 			Unsupported(conn, tok)
 			break
