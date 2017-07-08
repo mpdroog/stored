@@ -2,17 +2,18 @@ package main
 
 import (
 	"bytes"
-	"stored/config"
-	"net"
-	"stored/client"
-	"strings"
-	"stored/db"
-	"stored/rawio"
 	"io"
 	"log"
+	"net"
+	"stored/client"
+	"stored/config"
+	"stored/db"
+	"stored/rawio"
+	"strings"
+	"time"
 
-	"stored/headreader"
 	"stored/bodyreader"
+	"stored/headreader"
 )
 
 func Quit(conn *client.Conn, tok []string) {
@@ -129,7 +130,7 @@ func Ihave(conn *client.Conn, tok []string) {
 	}
 
 	r := b.Bytes()
-	b = bytes.NewBuffer(r[:len(r) - len(rawio.END)])
+	b = bytes.NewBuffer(r[:len(r)-len(rawio.END)])
 
 	if e := db.Save(msgid, b); e != nil {
 		log.Printf("ihave(%s) db.Save=%s\n", msgid, e.Error())
@@ -183,7 +184,7 @@ func Takethis(conn *client.Conn, tok []string) {
 	}
 
 	r := b.Bytes()
-	b = bytes.NewBuffer(r[:len(r) - len(rawio.END)])
+	b = bytes.NewBuffer(r[:len(r)-len(rawio.END)])
 
 	if e := db.Save(msgid, b); e != nil {
 		log.Printf("Takethis(%s) db.Save=%s\n", msgid, e.Error())
@@ -206,6 +207,10 @@ func Mode(conn *client.Conn, tok []string) {
 	}
 
 	conn.Send("203 Streaming permitted")
+}
+
+func Date(conn *client.Conn, tok []string) {
+	conn.Send("111 " + time.Now().UTC().Format("20060102150405"))
 }
 
 func req(conn *client.Conn) {
@@ -232,10 +237,12 @@ func req(conn *client.Conn) {
 			Ihave(conn, tok)
 		} else if cmd == "CHECK" {
 			Check(conn, tok)
-		} else if (cmd == "TAKETHIS") {
+		} else if cmd == "TAKETHIS" {
 			Takethis(conn, tok)
-		} else if (cmd == "MODE") {
+		} else if cmd == "MODE" {
 			Mode(conn, tok)
+		} else if cmd == "DATE" {
+			Date(conn, tok)
 		} else {
 			Unsupported(conn, tok)
 			break
