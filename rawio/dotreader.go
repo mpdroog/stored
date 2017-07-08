@@ -1,7 +1,7 @@
 // Insipired on the dotReader from textproto but way simpler
 // to improve performance.
 package rawio
-
+/*
 import (
 	"bytes"
 	"io"
@@ -70,3 +70,4 @@ func (d *DotReader) Read(b []byte) (n int, err error) {
 	}
 	return n, e
 }
+*/
