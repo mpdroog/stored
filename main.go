@@ -4,6 +4,7 @@ import (
 	"stored/config"
 	"flag"
 	"log"
+	_ "net/http/pprof"
 )
 
 func main() {
