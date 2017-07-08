@@ -11,19 +11,18 @@ X-TEST: YES
 Hello world!");
 
 $nntp = conn();
-fwrite($nntp, "MODE STREAM\r\n");
-assertEquals("203 Streaming permitted", stream_get_line($nntp, 999999999999, "\r\n"));
+connWrite($nntp, "MODE STREAM");
+assertEquals("203 Streaming permitted", connRead($nntp));
 
 // Send
 foreach ($msgs as $msg) {
-	echo "TAKETHIS <$msg>\r\n";
-	fwrite($nntp, "TAKETHIS <$msg>\r\n");
-	fwrite($nntp, $body . "\r\n.\r\n");
+	connWrite($nntp, "TAKETHIS <$msg>");
+	connWrite($nntp, $body . "\r\n.\r\n", true);
 }
+
 // Check
 foreach ($msgs as $msg) {
-	$res = stream_get_line($nntp, 999999999999, "\r\n");
-	echo $res . "\r\n";
+	$res = connRead($nntp);
 	assertPrefix("239 ", $res);
 }
 

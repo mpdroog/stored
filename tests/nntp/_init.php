@@ -8,14 +8,33 @@ function conn() {
 	if (stream_set_timeout($nntp, 120) === false) {
 		user_error("stream_set_timeout failed");
 	}
-	assertEquals("200 StoreD", stream_get_line($nntp, 999999999999, "\r\n"));
+	assertEquals("200 StoreD", connRead($nntp));
 	return $nntp;
 }
 
 function connClose($nntp) {
-	fwrite($nntp, "QUIT\r\n");
-	assertEquals("205 Bye.", stream_get_line($nntp, 999999999999, "\r\n"));
+	connWrite($nntp, "QUIT");
+	assertEquals("205 Bye.", connRead($nntp));
 	fclose($nntp);
+}
+
+function connWrite($nntp, $msg, $bin=false) {
+	if (VERBOSE && !$bin) {
+		echo ">> $msg\r\n";
+	}
+	$eol = "\r\n";
+	if ($bin) {
+		$eol = "";
+	}
+
+	return fwrite($nntp, "$msg$eol");
+}
+function connRead($nntp) {
+	$msg = stream_get_line($nntp, 999999999999, "\r\n");
+	if (VERBOSE) {
+		echo "<< $msg\r\n";
+	}
+	return $msg;
 }
 
 function generateRandomString($length = 10) {
