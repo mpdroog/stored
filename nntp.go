@@ -61,8 +61,8 @@ func read(conn *client.Conn, msgid string, msgtype string) {
 		log.Printf("read(%s) start streamreader\n", msgid)
 	}
 	if _, e := io.Copy(conn.GetWriter(), in); e != nil {
-		log.Printf("CRIT: %s\n", e.Error())
-		// TODO: conn.close?
+		log.Printf("read(%s) conn.GetWriter=%s\n", msgid, e.Error())
+		conn.Close()
 		return
 	}
 	if config.Verbose {
@@ -103,6 +103,7 @@ func Ihave(conn *client.Conn, tok []string) {
 	msgid := tok[1]
 	found, e := db.Exists(msgid)
 	if e != nil {
+		log.Printf("ihave(%s) db.Exists=%s\n", msgid, e.Error())
 		conn.Send("436 " + msgid + " Transfer not possible; try again later")
 		return
 	}
@@ -119,6 +120,7 @@ func Ihave(conn *client.Conn, tok []string) {
 	}
 	b := new(bytes.Buffer)
 	if _, e := io.Copy(b, conn.GetReader()); e != nil {
+		log.Printf("ihave(%s) conn.GetReader=%s\n", msgid, e.Error())
 		conn.Send("436 Failed reading input")
 		return
 	}
@@ -130,7 +132,8 @@ func Ihave(conn *client.Conn, tok []string) {
 	b = bytes.NewBuffer(r[:len(r) - len(rawio.END)])
 
 	if e := db.Save(msgid, b); e != nil {
-		conn.Send("436 Failed storing e=" + e.Error())
+		log.Printf("ihave(%s) db.Save=%s\n", msgid, e.Error())
+		conn.Send("436 Failed storing")
 		return
 	}
 
@@ -145,6 +148,7 @@ func Check(conn *client.Conn, tok []string) {
 	msgid := tok[1]
 	found, e := db.Exists(msgid)
 	if e != nil {
+		log.Printf("Check(%s) db.Exists=%s\n", msgid, e.Error())
 		conn.Send("431 " + msgid + " Transfer not possible; try again later")
 		return
 	}
@@ -169,7 +173,7 @@ func Takethis(conn *client.Conn, tok []string) {
 	}
 	b := new(bytes.Buffer)
 	if _, e := io.Copy(b, conn.GetReader()); e != nil {
-		log.Printf("Takethis(%s) io.Copy=%s", msgid, e.Error())
+		log.Printf("Takethis(%s) io.Copy=%s\n", msgid, e.Error())
 		conn.Send("400 Failed reading input")
 		conn.Close()
 		return
@@ -182,7 +186,7 @@ func Takethis(conn *client.Conn, tok []string) {
 	b = bytes.NewBuffer(r[:len(r) - len(rawio.END)])
 
 	if e := db.Save(msgid, b); e != nil {
-		log.Printf("Takethis(%s) db.Save=%s", msgid, e.Error())
+		log.Printf("Takethis(%s) db.Save=%s\n", msgid, e.Error())
 		conn.Send("400 Failed storing")
 		conn.Close()
 		return
