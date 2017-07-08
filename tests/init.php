@@ -2,7 +2,6 @@
 /**
  * Global settings.
  */
-define("API_KEY", "Abc");
 
 /* Prepare environment */
 error_reporting(E_ALL ^ E_STRICT);
@@ -23,7 +22,7 @@ function rn($subject) {
  */
 class Api {
     /** @var string Base URL */
-    private static $URL = "http://localhost:9090/";
+    private static $URL = "http://127.0.0.1:9090/";
     /** @var string User agent */
     private static $UA = "UA";
 
@@ -53,7 +52,7 @@ class Api {
      */
     public static function check() {
         if (! function_exists("curl_init")) {
-            throw new \Exception("Missing php5-curl: apt-get install php5-curl");
+            throw new \Exception("Missing php curl");
         }
     }
 
@@ -69,7 +68,6 @@ class Api {
      */
     public static function json($method, $path, array $fields) {
         $json = json_encode($fields);
-        var_dump($json);
         $raw = self::call($method, $path, $json);
         if ($raw === "null") {
             return null;
@@ -124,22 +122,14 @@ class Api {
         }
 
         $opt = TRUE;
-        $key = (strpos($path, "?") === FALSE ? "?" : "&") . "key=" . API_KEY;
-        $opt &= curl_setopt($ch, CURLOPT_URL, self::$URL . $path . $key);
+        $opt &= curl_setopt($ch, CURLOPT_URL, self::$URL . $path);
         if (strlen($body) > 0) {
             $opt &= curl_setopt($ch, CURLOPT_POSTFIELDS, $body);
         }
-        $opt &= curl_setopt($ch, CURLOPT_USERAGENT, self::$UA);
         $opt &= curl_setopt($ch, CURLOPT_RETURNTRANSFER, TRUE);
         $opt &= curl_setopt($ch, CURLOPT_CONNECTTIMEOUT, 1000);
         $opt &= curl_setopt($ch, CURLOPT_TIMEOUT, 1000);
-        $opt &= curl_setopt($ch, CURLOPT_SSL_VERIFYHOST, 2);
         $opt &= curl_setopt($ch, CURLOPT_CUSTOMREQUEST, $method);
-        $opt &= curl_setopt($ch, CURLOPT_HTTPHEADER, array(
-            "X-IP-Customer: " . self::getIp(TRUE),
-            "X-IP-Server: " . self::getIp(FALSE),
-            "X-PHP-Ver: " . phpversion()
-        ));
         $opt &= curl_setopt($ch, CURLOPT_HTTPHEADER, array(
             "Content-Type: " . $contentType
         ));

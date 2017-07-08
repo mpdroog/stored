@@ -106,7 +106,6 @@ func Save(msgid string, buf *bytes.Buffer) error {
 	disks := config.C.Storage
 	for i := 0; i < len(disks); i++ {
 		pos := (i+beginOffset % len(disks))
-		log.Printf("X -> %d\n", pos)
 		disk := config.C.Storage[pos]
 		if disk.Disabled {
 			// Skip disk
