@@ -3,13 +3,6 @@
  * Global settings.
  */
 
-/* Prepare environment */
-error_reporting(E_ALL ^ E_STRICT);
-ini_set('display_errors', 1);
-if (phpversion() < "5.3.0") {
-    throw new \Exception("Need at least PHP 5.3.0 for namespaces");
-}
-
 // Convert \n to \r\n
 function rn($subject) {
     return str_replace("\n", "\r\n", $subject);

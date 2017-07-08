@@ -1,6 +1,4 @@
 <?php
-require "./init.php";
-
 Api::check();
 
 // Add some data in DB
