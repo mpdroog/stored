@@ -2,30 +2,30 @@ package main
 
 import (
 	"bytes"
-	"stored/config"
 	"fmt"
-	"net/http"
+	"github.com/itshosted/webutils/httpd"
 	"github.com/itshosted/webutils/middleware"
 	"github.com/itshosted/webutils/muxdoc"
-	"github.com/itshosted/webutils/httpd"
+	"net/http"
+	"stored/config"
 
 	"encoding/json"
-	"stored/db"
 	"io"
+	"stored/db"
 
-	"stored/headreader"
-	"stored/bodyreader"
-	"log"
 	"encoding/base64"
+	"log"
+	"stored/bodyreader"
+	"stored/headreader"
 )
 
 var (
-	mux    muxdoc.MuxDoc
+	mux muxdoc.MuxDoc
 )
 
 type SaveInput struct {
 	Msgid string
-	Body string
+	Body  string
 }
 
 // Return API Documentation (paths)
@@ -61,7 +61,7 @@ func Post(w http.ResponseWriter, r *http.Request) error {
 
 	var (
 		in SaveInput
-		e error
+		e  error
 	)
 	if e = json.NewDecoder(r.Body).Decode(&in); e != nil {
 		return e
