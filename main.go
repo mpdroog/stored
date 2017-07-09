@@ -1,10 +1,10 @@
 package main
 
 import (
-	"stored/config"
 	"flag"
 	"log"
 	_ "net/http/pprof"
+	"stored/config"
 )
 
 func main() {
