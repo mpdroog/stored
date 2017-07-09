@@ -121,7 +121,7 @@ func Get(w http.ResponseWriter, r *http.Request) error {
 		in = headreader.New(buf)
 
 	} else if msgtype == "BODY" {
-		in = bodyreader.New(buf)
+		in = bodyreader.New(buf, bodyreader.DefaultBufSize)
 
 	} else {
 		httpd.FlushJson(w, httpd.DefaultResponse{

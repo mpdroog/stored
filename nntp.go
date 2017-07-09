@@ -51,7 +51,7 @@ func read(conn *client.Conn, msgid string, msgtype string) {
 
 	} else if msgtype == "BODY" {
 		code = "222"
-		in = bodyreader.New(buf)
+		in = bodyreader.New(buf, bodyreader.DefaultBufSize)
 
 	} else {
 		panic("Should not get here")
