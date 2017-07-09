@@ -30,13 +30,13 @@ $iterate = function($path) use ($ignore, &$iterate) {
 			continue;
 		}
 		if (VERBOSE) echo "run $path/$file\n";
-		ob_start();
+		//ob_start();
 		require $path."/".$file;
-		$res = ob_get_flush();
+		/*$res = ob_get_flush();
 		if (strlen($res) > 0) {
 			$ok = false;
 			echo $res;
-		}
+		}*/
 	}
 	return $ok;
 };

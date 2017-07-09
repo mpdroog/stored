@@ -20,7 +20,7 @@ function connClose($nntp) {
 
 function connWrite($nntp, $msg, $bin=false) {
 	if (VERBOSE && !$bin) {
-		echo ">> $msg\r\n";
+		echo ">> $msg\n";
 	}
 	$eol = "\r\n";
 	if ($bin) {
@@ -32,7 +32,7 @@ function connWrite($nntp, $msg, $bin=false) {
 function connRead($nntp) {
 	$msg = stream_get_line($nntp, 999999999999, "\r\n");
 	if (VERBOSE) {
-		echo "<< $msg\r\n";
+		echo "<< $msg\n";
 	}
 	return $msg;
 }
