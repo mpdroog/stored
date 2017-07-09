@@ -130,6 +130,12 @@ func Ihave(conn *client.Conn, tok []string) {
 	}
 
 	r := b.Bytes()
+	if len(r)-len(rawio.END) <= 0 {
+		log.Printf("takethis(%s) broken msg received\n", msgid)
+		conn.Send("400 Failed reading input")
+		conn.Close()
+		return
+	}
 	b = bytes.NewBuffer(r[:len(r)-len(rawio.END)])
 
 	if e := db.Save(msgid, b); e != nil {
@@ -184,6 +190,12 @@ func Takethis(conn *client.Conn, tok []string) {
 	}
 
 	r := b.Bytes()
+	if len(r)-len(rawio.END) <= 0 {
+		log.Printf("takethis(%s) broken msg received\n", msgid)
+		conn.Send("400 Failed reading input")
+		conn.Close()
+		return
+	}
 	b = bytes.NewBuffer(r[:len(r)-len(rawio.END)])
 
 	if e := db.Save(msgid, b); e != nil {
