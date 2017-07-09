@@ -132,7 +132,13 @@ func Ihave(conn *client.Conn, tok []string) {
 	r := b.Bytes()
 	if len(r)-len(rawio.END) <= 0 {
 		log.Printf("takethis(%s) broken msg received\n", msgid)
-		conn.Send("400 Failed reading input")
+		conn.Send("436 Failed reading input")
+		conn.Close()
+		return
+	}
+	if !bytes.Contains(r, bodyreader.SEP) {
+		log.Printf("takethis(%s) no head/body separator found\n", msgid)
+		conn.Send("436 No head/body separation found")
 		conn.Close()
 		return
 	}
@@ -193,6 +199,12 @@ func Takethis(conn *client.Conn, tok []string) {
 	if len(r)-len(rawio.END) <= 0 {
 		log.Printf("takethis(%s) broken msg received\n", msgid)
 		conn.Send("400 Failed reading input")
+		conn.Close()
+		return
+	}
+	if !bytes.Contains(r, bodyreader.SEP) {
+		log.Printf("takethis(%s) no head/body separator found\n", msgid)
+		conn.Send("436 No head/body separation found")
 		conn.Close()
 		return
 	}
