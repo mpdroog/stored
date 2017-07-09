@@ -17,6 +17,7 @@ func init() {
 }
 
 func Delete(url string, out interface{}) error {
+	url = "http://127.0.0.1/msgid?msgid=" + url
 	if config.Verbose {
 		fmt.Printf("HTTP.Delete url=%s\n", url)
 	}
