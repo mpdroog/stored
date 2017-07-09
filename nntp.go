@@ -222,7 +222,7 @@ func Stat(conn *client.Conn, tok []string) {
 	found, e := db.Exists(msgid)
 	if e != nil {
 		log.Printf("Stat(%s) db.Exists=%s\n", msgid, e.Error())
-		conn.Send("430 " + msgid + " Transfer not possible; try again later")
+		conn.Send("400 " + msgid + " Transfer not possible; try again later")
 		return
 	}
 	if found {
