@@ -1,37 +1,40 @@
 package config
 
 import (
-	"github.com/BurntSushi/toml"
-	"time"
-	"os"
-	"log"
 	"fmt"
-	"strings"
+	"log"
+	"os"
 	"strconv"
+	"strings"
+	"time"
+
+	"github.com/BurntSushi/toml"
 )
 
 type Disk struct {
 	Mountpoint string
-	Minfree string
-	MinfreeGB float64
-	Disabled bool
-	Name string
+	Minfree    string
+	MinfreeGB  float64
+	Disabled   bool
+	Name       string
 }
 type Config struct {
 	General struct {
-		HTTPListen []string `toml:"http_listen"`
-		NNTPListen []string `toml:"nntp_listen"`
-		IncomingLog string `toml:"incoming_log"`
+		HTTPListen              []string `toml:"http_listen"`
+		NNTPListen              []string `toml:"nntp_listen"`
+		IncomingLog             string   `toml:"incoming_log"`
+		ArticleRequestLog       string   `toml:"article_request_log"`
+		EnableArticleRequestLog bool     `toml:"enable_article_request_log"`
 	}
 	Storage []Disk
 }
 
 var (
-	C           Config
-	Verbose     bool
-	Appstart    time.Time
-	Hostname    string
-	L           *log.Logger
+	C        Config
+	Verbose  bool
+	Appstart time.Time
+	Hostname string
+	L        *log.Logger
 )
 
 func Init(f string) error {
@@ -97,7 +100,7 @@ func parseConfig() (e error) {
 			return e
 		}
 
-		if _, ok := names[ disk.Name ]; ok {
+		if _, ok := names[disk.Name]; ok {
 			return fmt.Errorf("Mountpoint(%s) has a duplicate name=%s", disk.Mountpoint, disk.Name)
 		}
 		names[disk.Name] = true

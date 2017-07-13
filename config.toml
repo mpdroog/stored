@@ -1,10 +1,22 @@
 [general]
+
+# Log requested articles to articlerequest.log 
+enable_article_request_log=false
+article_request_log="."
+
+# Log incoming message-ids to incoming.log 
+# needed for cleanerd to cleanup/remove articles
 incoming_log="."
+
+# HTTP api listen address
 http_listen=["0.0.0.0:9090"]
+
+# NNTP listen address
 nntp_listen=["0.0.0.0:9091"]
 
 # WARN: NEVER remove a spool from this list
 # but set it to disabled so disk I/O is kept low
+
 [[storage]]
 name="s1"
 mountpoint="./datastore/2017-05-09"
@@ -15,3 +27,4 @@ disabled=true
 name="s2"
 mountpoint="./datastore/2017-07-05"
 minfree="100GB"
+disabled=false

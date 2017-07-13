@@ -57,6 +57,8 @@ func read(conn *client.Conn, msgid string, msgtype string) {
 		panic("Should not get here")
 	}
 
+	db.AppendArticleRequestLog(msgid)
+
 	conn.Send(code + " " + msgid)
 	if config.Verbose {
 		log.Printf("read(%s) start streamreader\n", msgid)
