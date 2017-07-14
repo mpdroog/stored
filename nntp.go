@@ -120,9 +120,10 @@ func Ihave(conn *client.Conn, tok []string) {
 		log.Printf("ihave(%s) start streamreader\n", msgid)
 	}
 	b := new(bytes.Buffer)
-	if _, e := io.Copy(b, conn.GetReader()); e != nil {
-		log.Printf("ihave(%s) conn.GetReader=%s\n", msgid, e.Error())
-		conn.Send("436 Failed reading input")
+	if e := conn.GetDataBlock(b); e != nil {
+		log.Printf("Ihave(%s) io.Copy=%s\n", msgid, e.Error())
+		conn.Send("400 Failed reading input")
+		conn.Close()
 		return
 	}
 	if config.Verbose {
@@ -184,8 +185,9 @@ func Takethis(conn *client.Conn, tok []string) {
 	if config.Verbose {
 		log.Printf("takethis(%s) start streamreader\n", msgid)
 	}
+
 	b := new(bytes.Buffer)
-	if _, e := io.Copy(b, conn.GetReader()); e != nil {
+	if e := conn.GetDataBlock(b); e != nil {
 		log.Printf("Takethis(%s) io.Copy=%s\n", msgid, e.Error())
 		conn.Send("400 Failed reading input")
 		conn.Close()
