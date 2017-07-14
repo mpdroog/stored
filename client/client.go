@@ -7,7 +7,7 @@ import (
 	"stored/config"
 	"strings"
 	"io"
-	"stored/rawio"
+	"bytes"
 )
 
 const EOF = "\r\n"
@@ -53,9 +53,20 @@ func (c *Conn) LocalAddr() string {
 	return c.conn.LocalAddr().String()
 }
 
-// Get DotReader
-func (c *Conn) GetReader() io.Reader {
-	return rawio.New(c.r, false)
+func (c *Conn) GetDataBlock(buf *bytes.Buffer) error {
+	for i := 0; i < 500; i++ {
+		b, e := c.r.ReadBytes('\n')
+		if e != nil {
+			return e
+		}
+		buf.Write(b)
+
+		if bytes.Compare(b, []byte(".\r\n")) == 0 {
+			return nil
+		}
+	}
+
+	return fmt.Errorf("GetDataBlock Max iterations!")
 }
 
 func (c *Conn) GetWriter() io.Writer {
