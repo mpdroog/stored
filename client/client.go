@@ -54,7 +54,7 @@ func (c *Conn) LocalAddr() string {
 }
 
 func (c *Conn) GetDataBlock(buf *bytes.Buffer) error {
-	for i := 0; i < 500; i++ {
+	for i := 0; i < 100000; i++ {
 		b, e := c.r.ReadBytes('\n')
 		if e != nil {
 			return e
