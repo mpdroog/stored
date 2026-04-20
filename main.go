@@ -4,7 +4,7 @@ import (
 	"flag"
 	"log"
 	_ "net/http/pprof"
-	"stored/config"
+	"github.com/mpdroog/stored/config"
 )
 
 func main() {

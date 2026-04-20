@@ -3,7 +3,7 @@ package db
 import (
 	"bytes"
 	"log"
-	"stored/config"
+	"github.com/mpdroog/stored/config"
 	"fmt"
 	"os"
 	"io/ioutil"

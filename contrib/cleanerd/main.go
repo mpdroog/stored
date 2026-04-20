@@ -1,7 +1,7 @@
 package main
 
 import (
-	"stored/config"
+	"github.com/mpdroog/stored/config"
 	"flag"
 	"time"
 	"fmt"

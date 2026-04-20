@@ -5,15 +5,15 @@ import (
 	"io"
 	"log"
 	"net"
-	"stored/client"
-	"stored/config"
-	"stored/db"
-	"stored/rawio"
+	"github.com/mpdroog/stored/client"
+	"github.com/mpdroog/stored/config"
+	"github.com/mpdroog/stored/db"
+	"github.com/mpdroog/stored/rawio"
 	"strings"
 	"time"
 
-	"stored/bodyreader"
-	"stored/headreader"
+	"github.com/mpdroog/stored/bodyreader"
+	"github.com/mpdroog/stored/headreader"
 )
 
 func Quit(conn *client.Conn, tok []string) {

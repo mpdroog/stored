@@ -6,7 +6,7 @@ import (
 	"fmt"
 	"io/ioutil"
 	"net/http"
-	"stored/config"
+	"github.com/mpdroog/stored/config"
 	"encoding/json"
 )
 

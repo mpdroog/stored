@@ -7,16 +7,16 @@ import (
 	"github.com/itshosted/webutils/middleware"
 	"github.com/itshosted/webutils/muxdoc"
 	"net/http"
-	"stored/config"
+	"github.com/mpdroog/stored/config"
 
 	"encoding/json"
 	"io"
-	"stored/db"
+	"github.com/mpdroog/stored/db"
 
 	"encoding/base64"
 	"log"
-	"stored/bodyreader"
-	"stored/headreader"
+	"github.com/mpdroog/stored/bodyreader"
+	"github.com/mpdroog/stored/headreader"
 )
 
 var (

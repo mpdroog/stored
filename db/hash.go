@@ -1,7 +1,7 @@
 package db
 
 import (
-	"stored/config"
+	"github.com/mpdroog/stored/config"
 	"encoding/binary"
 	"fmt"
 	"crypto/sha256"

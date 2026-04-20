@@ -5,7 +5,7 @@ import (
 	"log"
 	"os"
 	"path"
-	"stored/config"
+	"github.com/mpdroog/stored/config"
 	"time"
 )
 

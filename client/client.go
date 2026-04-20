@@ -4,7 +4,7 @@ import (
 	"bufio"
 	"fmt"
 	"net"
-	"stored/config"
+	"github.com/mpdroog/stored/config"
 	"strings"
 	"io"
 	"bytes"
